@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "fft.js": "4.0.4",
-    "papaparse": "5.5.3",
+    "papaparse": "5.5.4",
     "plotly.js": "3.1.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
@@ -28,7 +28,7 @@
     "@testing-library/jest-dom": "6.6.4",
     "@testing-library/react": "16.3.0",
     "@types/node": "24.2.1",
-    "@types/papaparse": "5.3.16",
+    "@types/papaparse": "5.5.2",
     "@types/plotly.js": "3.0.10",
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
