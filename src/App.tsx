@@ -34,6 +34,7 @@ import {
 } from "./io/export";
 import {
   loadPreferences,
+  normalizePreprocessRange,
   resetApplication,
   savePreferences,
   type Preferences
@@ -71,7 +72,10 @@ type Action =
   | { type: "select_all"; ids: string[] }
   | { type: "clear_selection" }
   | { type: "columns"; columns: Partial<ColumnSelection> }
-  | { type: "preferences"; preferences: Preferences }
+  | {
+      type: "preferences";
+      update: (preferences: Preferences) => Preferences;
+    }
   | { type: "analysis"; results: DatasetAnalysis[]; errors: AnalysisFailure[] }
   | { type: "status"; status: string; busy?: boolean }
   | { type: "search"; search: string }
@@ -85,19 +89,26 @@ type Action =
   | { type: "remove"; ids: Set<string> };
 
 function initialState(): State {
+  const preferences = loadPreferences();
+  const hasSavedRange =
+    preferences.preprocess.xMin !== null && preferences.preprocess.xMax !== null;
   return {
     datasets: [],
     selected: new Set(),
     columns: { x: "", y: "", xError: null, yError: null },
-    preferences: loadPreferences(),
+    preferences,
     results: [],
     errors: [],
     status: "Choose one or more CSV scans to begin.",
     busy: false,
     search: "",
-    rangeMode: "full",
-    rangeMinimum: "",
-    rangeMaximum: "",
+    rangeMode: hasSavedRange ? "manual" : "full",
+    rangeMinimum: hasSavedRange
+      ? preferences.preprocess.xMin!.toPrecision(10)
+      : "",
+    rangeMaximum: hasSavedRange
+      ? preferences.preprocess.xMax!.toPrecision(10)
+      : "",
     tab: "time"
   };
 }
@@ -142,8 +153,16 @@ function reducer(state: State, action: Action): State {
       return { ...state, selected: new Set(), results: [] };
     case "columns":
       return { ...state, columns: { ...state.columns, ...action.columns } };
-    case "preferences":
-      return { ...state, preferences: action.preferences };
+    case "preferences": {
+      const preferences = action.update(state.preferences);
+      return {
+        ...state,
+        preferences: {
+          ...preferences,
+          preprocess: normalizePreprocessRange(preferences.preprocess)
+        }
+      };
+    }
     case "analysis":
       return {
         ...state,
@@ -335,11 +354,13 @@ export default function App() {
 
   const updatePreferences = useCallback(
     (update: (preferences: Preferences) => Preferences) => {
-      dispatch({ type: "preferences", preferences: update(state.preferences) });
+      dispatch({ type: "preferences", update });
     },
-    [state.preferences]
+    []
   );
-  const setPreprocess = <K extends keyof Preferences["preprocess"]>(
+  const setPreprocess = <
+    K extends Exclude<keyof Preferences["preprocess"], "xMin" | "xMax">
+  >(
     key: K,
     value: Preferences["preprocess"][K]
   ) =>
@@ -393,15 +414,24 @@ export default function App() {
   );
 
   const setRangeMode = (mode: RangeMode) => {
-    dispatch({ type: "range", mode });
     if (mode === "full") {
-      setPreprocess("xMin", null);
-      setPreprocess("xMax", null);
+      dispatch({ type: "range", mode, minimum: "", maximum: "" });
+      updatePreferences((preferences) => ({
+        ...preferences,
+        preprocess: {
+          ...preferences.preprocess,
+          xMin: null,
+          xMax: null
+        }
+      }));
     } else if (!state.rangeMinimum && overlap) {
+      dispatch({ type: "range", mode });
       const minimum = overlap[0].toPrecision(10);
       const maximum = overlap[1].toPrecision(10);
       dispatch({ type: "range", minimum, maximum });
       applyRange(minimum, maximum);
+    } else {
+      dispatch({ type: "range", mode });
     }
   };
 

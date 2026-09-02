@@ -83,6 +83,16 @@ describe("trace preparation", () => {
       )
     ).toThrow(/nonuniform/);
   });
+
+  it("rejects an incomplete FFT range pair", () => {
+    expect(() =>
+      prepareTrace(
+        Float64Array.from([0, 1, 2]),
+        Float64Array.from([1, 2, 3]),
+        { ...DEFAULT_PREPROCESS, xMin: 1 }
+      )
+    ).toThrow(/both be set or both be cleared/);
+  });
 });
 
 describe("spectrum compatibility", () => {

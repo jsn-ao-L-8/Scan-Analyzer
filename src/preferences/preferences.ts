@@ -61,14 +61,35 @@ export const DEFAULT_PREFERENCES: Preferences = {
   }
 };
 
+export function normalizePreprocessRange(
+  preprocess: PreprocessConfig
+): PreprocessConfig {
+  const { xMin, xMax } = preprocess;
+  if (xMin === null && xMax === null) return preprocess;
+  if (
+    typeof xMin !== "number" ||
+    typeof xMax !== "number" ||
+    !Number.isFinite(xMin) ||
+    !Number.isFinite(xMax) ||
+    xMin >= xMax
+  ) {
+    return { ...preprocess, xMin: null, xMax: null };
+  }
+  return preprocess;
+}
+
 export function loadPreferences(): Preferences {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "");
     if (parsed?.schemaVersion !== 1) return structuredClone(DEFAULT_PREFERENCES);
+    const preprocess = normalizePreprocessRange({
+      ...DEFAULT_PREPROCESS,
+      ...parsed.preprocess
+    });
     return {
       ...structuredClone(DEFAULT_PREFERENCES),
       ...parsed,
-      preprocess: { ...DEFAULT_PREPROCESS, ...parsed.preprocess },
+      preprocess,
       spectrum: { ...DEFAULT_SPECTRUM, ...parsed.spectrum },
       plot: { ...DEFAULT_PREFERENCES.plot, ...parsed.plot }
     };

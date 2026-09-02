@@ -81,11 +81,13 @@ export function prepareTrace(
     if (x[index] - x[index - 1] === 0) throw new Error("Duplicate X values are not supported.");
   }
 
-  const bounds = [config.xMin, config.xMax].filter(
-    (value): value is number => value !== null
-  );
-  const low = bounds.length ? Math.min(...bounds) : -Infinity;
-  const high = bounds.length ? Math.max(...bounds) : Infinity;
+  const hasMinimum = config.xMin !== null;
+  const hasMaximum = config.xMax !== null;
+  if (hasMinimum !== hasMaximum) {
+    throw new Error("FFT minimum and maximum must both be set or both be cleared.");
+  }
+  const low = config.xMin ?? -Infinity;
+  const high = config.xMax ?? Infinity;
   const kept: number[] = [];
   for (let index = 0; index < x.length; index += 1) {
     if (x[index] >= low && x[index] <= high) kept.push(index);
